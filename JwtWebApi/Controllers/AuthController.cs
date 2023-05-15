@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
+using JwtWebApi.Models;
 
 namespace JwtWebApi.Controllers
 {
 
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
@@ -13,20 +14,35 @@ namespace JwtWebApi.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register(UserDto request)
         {
-            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
-            user.UsernName = request.UserName;
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+            user.UserName = request.UserName;
             user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
             return Ok(user);
         }
 
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        [HttpPost("login")]
+        public async Task<ActionResult<User>> Login(UserDto request)
         {
-            using (var hmac = new HMACSHA512())
+            if (user.UserName != request.UserName)
             {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return BadRequest("BadRequest1");
             }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                return BadRequest("BadRequest2");
+            }
+            return Ok(user);
         }
+
+        //private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        //{
+        //    using (var hmac = new HMACSHA512())
+        //    {
+        //        passwordSalt = hmac.Key;
+        //        passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+        //    }
+        //}
     }
 }
